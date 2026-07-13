@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>キーボード練習道場</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
+
+  :root{
+    --washi:#f2ead9;
+    --washi-deep:#e7dcc2;
+    --ink:#1f1c19;
+    --ink-soft:#3a352e;
+    --hanko:#a8352a;
+    --hanko-deep:#7e2019;
+    --gold:#b8933f;
+    --line:#c9bb9a;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(184,147,63,0.08), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(168,53,42,0.06), transparent 45%),
+      var(--washi);
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(184,147,63,0.08), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(168,53,42,0.06), transparent 45%),
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 3px),
+      var(--washi);
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    display:flex;
+    justify-content:center;
+    padding:40px 16px;
+  }
+
+  body.game-active{
+    padding:16px 16px;
+  }
+
+  .stage{
+    width:100%;
+    max-width:640px;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom:28px;
+    position:relative;
+  }
+
+  .kicker{
+    font-size:12px;
+    letter-spacing:0.35em;
+    color:var(--gold);
+    margin-bottom:6px;
+  }
+
+  h1{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:38px;
+    margin:0;
+    letter-spacing:0.08em;
+    position:relative;
+    display:inline-block;
+  }
+
+  .seal{
+    position:absolute;
+    top:-14px;
+    right:-56px;
+    width:52px;
+    height:52px;
+    border:2.5px solid var(--hanko);
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transform:rotate(8deg);
+    opacity:0.85;
+  }
+
+  .seal span{
+    font-family:'Shippori Mincho', serif;
+    color:var(--hanko);
+    font-weight:800;
+    font-size:20px;
+    line-height:1;
+  }
+
+  .panel{
+    background:rgba(255,253,246,0.55);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:28px;
+    position:relative;
+  }
+
+  .panel::before{
+    content:"";
+    position:absolute;
+    inset:6px;
+    border:1px solid rgba(31,28,25,0.12);
+    border-radius:2px;
+    pointer-events:none;
+  }
+
+  .mode-tabs{
+    display:flex;
+    gap:0;
+    justify-content:center;
+    margin-bottom:22px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    overflow:hidden;
+  }
+
+  .mode-btn{
+    flex:1;
+    padding:11px 8px;
+    background:transparent;
+    border:none;
+    border-right:1px solid var(--line);
+    font-family:'Shippori Mincho', serif;
+    font-size:14px;
+    font-weight:600;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:all 0.2s ease;
+  }
+
+  .mode-btn:last-child{
+    border-right:none;
+  }
+
+  .mode-btn.active{
+    background:var(--hanko);
+    color:var(--washi);
+  }
+
+  .hidden{
+    display:none !important;
+  }
+
+  .levels{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin-bottom:22px;
+  }
+
+  .level-btn{
+    flex:1;
+    padding:14px 8px;
+    background:transparent;
+    border:1.5px solid var(--line);
+    border-radius:3px;
+    font-family:'Shippori Mincho', serif;
+    font-size:15px;
+    font-weight:600;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:all 0.2s ease;
+  }
+
+  .level-btn .sub{
+    display:block;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:11px;
+    font-weight:400;
+    color:var(--ink-soft);
+    opacity:0.6;
+    margin-top:4px;
+  }
+
+  .level-btn:hover{
+    border-color:var(--gold);
+  }
+
+  .level-btn.active{
+    background:var(--ink);
+    border-color:var(--ink);
+    color:var(--washi);
+  }
+
+  .level-btn.active .sub{
+    color:var(--washi);
+    opacity:0.75;
+  }
+
+  .start-row{
+    text-align:center;
+    margin-bottom:8px;
+  }
+
+  .start-btn{
+    padding:12px 40px;
+    background:var(--hanko);
+    color:var(--washi);
+    border:none;
+    border-radius:3px;
+    font-family:'Shippori Mincho', serif;
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:0.1em;
+    cursor:pointer;
+    transition:background 0.2s ease;
+  }
+
+  .start-btn:hover{
+    background:var(--hanko-deep);
+  }
+
+  .game{
+    display:none;
+  }
+
+  .game.visible{
+    display:block;
+  }
+
+  .setup.hidden{
+    display:none;
+  }
+
+  .hud{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+    font-size:13px;
+    color:var(--ink-soft);
+    letter-spacing:0.05em;
+  }
+
+  .timer-track{
+    height:6px;
+    width:100%;
+    background:rgba(31,28,25,0.1);
+    border-radius:4px;
+    overflow:hidden;
+    margin-bottom:24px;
+  }
+
+  .timer-fill{
+    height:100%;
+    background:linear-gradient(90deg, var(--gold), var(--hanko));
+    width:100%;
+    transition:width 1s linear;
+  }
+
+  .word-frame{
+    text-align:center;
+    padding:36px 12px;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    margin-bottom:26px;
+  }
+
+  .word-eyebrow{
+    font-size:11px;
+    letter-spacing:0.3em;
+    color:var(--gold);
+    margin-bottom:12px;
+  }
+
+  #word-display{
+    font-family:'Shippori Mincho', serif;
+    font-size:46px;
+    font-weight:600;
+    letter-spacing:0.12em;
+    word-break:break-all;
+  }
+
+  .char{
+    display:inline-block;
+    transition:color 0.15s ease;
+  }
+
+  .char.done{
+    color:var(--hanko);
+  }
+
+  .input-row{
+    position:relative;
+  }
+
+  #typing-input{
+    width:100%;
+    padding:16px 18px;
+    font-size:22px;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    border:1.5px solid var(--line);
+    border-radius:3px;
+    background:rgba(255,253,246,0.7);
+    color:var(--ink);
+    outline:none;
+    letter-spacing:0.08em;
+    transition:border-color 0.15s ease;
+  }
+
+  #typing-input:focus{
+    border-color:var(--gold);
+  }
+
+  #typing-input.shake{
+    animation:shake 0.3s ease;
+    border-color:var(--hanko-deep);
+  }
+
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-6px);}
+    75%{transform:translateX(6px);}
+  }
+
+  .ime-spacer{
+    height:0px;
+  }
+
+  .hint{
+    text-align:center;
+    font-size:12px;
+    color:var(--ink-soft);
+    opacity:0.65;
+    margin-top:10px;
+    min-height:16px;
+  }
+
+  .result{
+    display:none;
+    text-align:center;
+  }
+
+  .result.visible{
+    display:block;
+  }
+
+  .result-title{
+    font-family:'Shippori Mincho', serif;
+    font-size:14px;
+    letter-spacing:0.3em;
+    color:var(--gold);
+    margin-bottom:6px;
+  }
+
+  .result-score{
+    font-family:'Shippori Mincho', serif;
+    font-size:64px;
+    font-weight:800;
+    color:var(--hanko);
+    margin-bottom:4px;
+  }
+
+  .result-sub{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:26px;
+  }
+
+  .stat-grid{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin-bottom:26px;
+  }
+
+  .stat-box{
+    flex:1;
+    max-width:140px;
+    padding:14px 8px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:rgba(255,253,246,0.5);
+  }
+
+  .stat-value{
+    font-family:'Shippori Mincho', serif;
+    font-size:22px;
+    font-weight:800;
+    color:var(--ink);
+    margin-bottom:4px;
+  }
+
+  .stat-label{
+    font-size:11px;
+    color:var(--ink-soft);
+    opacity:0.7;
+    letter-spacing:0.05em;
+  }
+
+  .retry-btn{
+    padding:12px 36px;
+    background:transparent;
+    border:1.5px solid var(--ink);
+    border-radius:3px;
+    font-family:'Shippori Mincho', serif;
+    font-size:15px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+
+  .retry-btn:hover{
+    background:var(--ink);
+    color:var(--washi);
+  }
+
+  @media (max-width:480px){
+    h1{font-size:28px;}
+    .seal{display:none;}
+    #word-display{font-size:32px;}
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <header id="site-header">
+    <div class="kicker">KEYBOARD PRACTICE DOJO</div>
+    <h1>キーボード練習道場</h1>
+    <div class="seal"><span>打</span></div>
+  </header>
+
+  <div class="panel">
+
+    <div class="setup" id="setup">
+      <div class="mode-tabs">
+        <button class="mode-btn active" data-mode="hiragana">ひらがな</button>
+        <button class="mode-btn" data-mode="kanji">漢字</button>
+      </div>
+
+      <div class="levels" data-row="hiragana">
+        <button class="level-btn active" data-level="beginner">初級<span class="sub">2〜4文字</span></button>
+        <button class="level-btn" data-level="intermediate">中級<span class="sub">5〜7文字</span></button>
+        <button class="level-btn" data-level="advanced">上級<span class="sub">8文字以上</span></button>
+      </div>
+
+      <div class="levels hidden" data-row="kanji">
+        <button class="level-btn active" data-level="beginner">初級<span class="sub">10〜12文字</span></button>
+        <button class="level-btn" data-level="intermediate">中級<span class="sub">12〜14文字</span></button>
+        <button class="level-btn" data-level="advanced">上級<span class="sub">14文字以上</span></button>
+      </div>
+
+      <div class="start-row">
+        <button class="start-btn" id="start-btn">はじめる（100秒）</button>
+      </div>
+    </div>
+
+    <div class="game" id="game">
+      <div class="hud">
+        <span id="score-label">せいかい 0 もん</span>
+        <span id="time-label">残り 100 秒</span>
+      </div>
+      <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+
+      <div class="word-frame">
+        <div class="word-eyebrow" id="level-label">初級</div>
+        <div id="word-display"></div>
+      </div>
+
+      <div class="ime-spacer" id="ime-spacer"></div>
+
+      <div class="input-row">
+        <input type="text" id="typing-input" autocomplete="off" placeholder="ここに入力してください">
+      </div>
+      <div class="hint" id="hint-label">Enterで確定</div>
+    </div>
+
+    <div class="result" id="result">
+      <div class="result-title">RESULT</div>
+      <div class="result-score" id="result-score">0</div>
+      <div class="result-sub" id="result-sub">総合スコア</div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-value" id="stat-accuracy">0%</div>
+          <div class="stat-label">正誤率</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-speed">0</div>
+          <div class="stat-label">文字/分</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-miss">0</div>
+          <div class="stat-label">ミス数</div>
+        </div>
+      </div>
+      <button class="retry-btn" id="retry-btn">もう一度</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const wordBank = {
+  hiragana: {
+    beginner: ["たべる","ねこ","いぬ","さくら","つくえ","ほん","みず","はな","とり","やま","かわ","うみ","そら","くも","あめ","ゆき","はる","なつ","あき","ふゆ","いろ","おと","かぜ","こおり","きって","たまご","りんご","ばなな","めがね","くつした"],
+    intermediate: ["あさごはん","としょかん","どうぶつえん","おかあさん","おとうさん","きょうしつ","てんきよほう","おかしをたべる","がっこういく","でんしゃにのる","ほんをよむ","てがみをかく","にわのはな","おともだち","なつやすみ"],
+    advanced: ["おはようございます","ありがとうございます","よろしくおねがいします","きょうはいいてんきです","にほんごをべんきょうする","としょかんでほんをかりる","でんしゃがおくれています","せんせいにしつもんする","おかあさんがりょうりをつくる","なつやすみにうみへいく"]
+  },
+  kanji: {
+    beginner: ["猫が窓辺で眠っている","駅前に新しい店ができた","明日は友達と映画を見る","父は毎朝新聞を読みます","週末に家族と旅行に行く","先生が黒板に字を書いた","夏休みに海へ泳ぎに行った","新しい本を図書館で借りた","庭に美しい花が咲いている","電車が定刻通りに到着した","母が朝ご飯を作ってくれた"],
+    intermediate: ["公園で子供たちが遊んでいる","彼女は毎日日記をつけている","雨が降ってきたので傘をさす","料理を作るのが上手になった","駅から歩いて十分かかります","兄は大学で経済学を学んでいる","祖母が昔の写真を見せてくれた","新しい携帯電話を買いに行った"],
+    advanced: ["会社の会議は午後三時から始まる","来年の春に新しい学校へ入学する","友人と一緒に山に登る計画を立てた","毎朝早起きをして散歩をしています","日本語の勉強を一生懸命続けている","隣の家族が引っ越してきたと聞いた","台風の影響で電車が止まってしまった","図書館で静かに本を読む時間が好きだ","来週の日曜日に親戚が遊びに来る予定です"]
+  }
+};
+
+const levelLabels = { beginner:"初級", intermediate:"中級", advanced:"上級" };
+
+let currentMode = "hiragana";
+let currentLevel = "beginner";
+let currentWord = "";
+let usedWords = [];
+let score = 0;
+let missCount = 0;
+let totalCharsTyped = 0;
+let timeLeft = 100;
+let timerId = null;
+let isComposing = false;
+
+const setupEl = document.getElementById("setup");
+const gameEl = document.getElementById("game");
+const resultEl = document.getElementById("result");
+const wordDisplayEl = document.getElementById("word-display");
+const inputEl = document.getElementById("typing-input");
+const scoreLabelEl = document.getElementById("score-label");
+const timeLabelEl = document.getElementById("time-label");
+const timerFillEl = document.getElementById("timer-fill");
+const levelLabelEl = document.getElementById("level-label");
+const hintLabelEl = document.getElementById("hint-label");
+const resultScoreEl = document.getElementById("result-score");
+const resultSubEl = document.getElementById("result-sub");
+const statAccuracyEl = document.getElementById("stat-accuracy");
+const statSpeedEl = document.getElementById("stat-speed");
+const statMissEl = document.getElementById("stat-miss");
+const imeSpacerEl = document.getElementById("ime-spacer");
+const headerEl = document.getElementById("site-header");
+
+function fitSpacerToViewport(){
+  imeSpacerEl.style.height = "0px";
+  requestAnimationFrame(() => {
+    const contentHeight = document.documentElement.scrollHeight;
+    const available = window.innerHeight - contentHeight;
+    imeSpacerEl.style.height = `${Math.max(0, available)}px`;
+  });
+}
+
+window.addEventListener("resize", fitSpacerToViewport);
+
+document.querySelectorAll(".mode-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentMode = btn.dataset.mode;
+    currentLevel = "beginner";
+    document.querySelectorAll(".levels").forEach(row => {
+      row.classList.toggle("hidden", row.dataset.row !== currentMode);
+      row.querySelectorAll(".level-btn").forEach((lb, i) => {
+        lb.classList.toggle("active", i === 0);
+      });
+    });
+  });
+});
+
+document.querySelectorAll(".levels").forEach(row => {
+  row.querySelectorAll(".level-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      row.querySelectorAll(".level-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentLevel = btn.dataset.level;
+    });
+  });
+});
+
+document.getElementById("start-btn").addEventListener("click", startGame);
+document.getElementById("retry-btn").addEventListener("click", () => {
+  resultEl.classList.remove("visible");
+  setupEl.classList.remove("hidden");
+});
+
+function pickWord(){
+  const pool = wordBank[currentMode][currentLevel];
+  let candidates = pool.filter(w => !usedWords.includes(w));
+  if(candidates.length === 0){
+    usedWords = [];
+    candidates = pool;
+  }
+  const word = candidates[Math.floor(Math.random() * candidates.length)];
+  usedWords.push(word);
+  return word;
+}
+
+function renderWord(){
+  wordDisplayEl.innerHTML = currentWord.split("").map(c => `<span class="char">${c}</span>`).join("");
+}
+
+function updateProgressHighlight(typed){
+  const chars = wordDisplayEl.querySelectorAll(".char");
+  chars.forEach((el, i) => {
+    if(i < typed.length && typed[i] === currentWord[i]){
+      el.classList.add("done");
+    } else {
+      el.classList.remove("done");
+    }
+  });
+}
+
+function nextWord(){
+  currentWord = pickWord();
+  renderWord();
+  inputEl.value = "";
+  hintLabelEl.textContent = "Enterで確定";
+  fitSpacerToViewport();
+}
+
+function startGame(){
+  setupEl.classList.add("hidden");
+  resultEl.classList.remove("visible");
+  gameEl.classList.add("visible");
+  headerEl.classList.add("hidden");
+  document.body.classList.add("game-active");
+  fitSpacerToViewport();
+  const modeLabel = currentMode === "kanji" ? "漢字" : "ひらがな";
+  levelLabelEl.textContent = `${modeLabel}・${levelLabels[currentLevel]}`;
+  score = 0;
+  missCount = 0;
+  totalCharsTyped = 0;
+  timeLeft = 100;
+  usedWords = [];
+  scoreLabelEl.textContent = `せいかい 0 もん`;
+  timeLabelEl.textContent = `残り 100 秒`;
+  timerFillEl.style.width = "100%";
+  nextWord();
+  inputEl.focus();
+  clearInterval(timerId);
+  timerId = setInterval(() => {
+    timeLeft--;
+    timeLabelEl.textContent = `残り ${timeLeft} 秒`;
+    timerFillEl.style.width = `${(timeLeft / 100) * 100}%`;
+    if(timeLeft <= 0){
+      endGame();
+    }
+  }, 1000);
+}
+
+function endGame(){
+  clearInterval(timerId);
+  gameEl.classList.remove("visible");
+  headerEl.classList.remove("hidden");
+  document.body.classList.remove("game-active");
+  resultEl.classList.add("visible");
+
+  const attempts = score + missCount;
+  const accuracy = attempts === 0 ? 0 : Math.round((score / attempts) * 100);
+  const speed = Math.round((totalCharsTyped / 100) * 60);
+  const finalScore = Math.max(0, Math.round(score * 100 + speed * 2 - missCount * 30));
+
+  resultScoreEl.textContent = finalScore;
+  const modeLabel = currentMode === "kanji" ? "漢字" : "ひらがな";
+  resultSubEl.textContent = `${modeLabel}・${levelLabels[currentLevel]} / ${score}もん せいかい`;
+  statAccuracyEl.textContent = `${accuracy}%`;
+  statSpeedEl.textContent = speed;
+  statMissEl.textContent = missCount;
+}
+
+function shakeInput(){
+  inputEl.classList.remove("shake");
+  void inputEl.offsetWidth;
+  inputEl.classList.add("shake");
+}
+
+inputEl.addEventListener("compositionstart", () => { isComposing = true; });
+inputEl.addEventListener("compositionend", () => {
+  setTimeout(() => { isComposing = false; }, 0);
+});
+
+inputEl.addEventListener("input", () => {
+  updateProgressHighlight(inputEl.value);
+});
+
+inputEl.addEventListener("keydown", (e) => {
+  if(e.key !== "Enter") return;
+  if(isComposing || e.isComposing || e.keyCode === 229) return;
+  e.preventDefault();
+
+  const typed = inputEl.value.trim();
+
+  if(typed !== currentWord){
+    missCount++;
+    hintLabelEl.textContent = "まだ違います";
+    shakeInput();
+    return;
+  }
+
+  score++;
+  totalCharsTyped += currentWord.length;
+  scoreLabelEl.textContent = `せいかい ${score} もん`;
+  nextWord();
+});
+</script>
+</body>
+</html>
