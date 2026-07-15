@@ -194,12 +194,15 @@
   }
 
   .start-row{
-    text-align:center;
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    flex-wrap:wrap;
     margin-bottom:8px;
   }
 
   .start-btn{
-    padding:12px 40px;
+    padding:12px 32px;
     background:var(--hanko);
     color:var(--washi);
     border:none;
@@ -214,6 +217,63 @@
 
   .start-btn:hover{
     background:var(--hanko-deep);
+  }
+
+  .start-btn.online-btn{
+    background:var(--ink);
+  }
+
+  .start-btn.online-btn:hover{
+    background:var(--ink-soft);
+  }
+
+  .online-status{
+    display:none;
+    text-align:center;
+    padding:20px 8px;
+  }
+
+  .online-status.visible{
+    display:block;
+  }
+
+  .status-title{
+    font-family:'Shippori Mincho', serif;
+    font-size:18px;
+    font-weight:600;
+    margin-bottom:10px;
+  }
+
+  .search-spinner{
+    width:40px;
+    height:40px;
+    border:3px solid var(--line);
+    border-top-color:var(--hanko);
+    border-radius:50%;
+    margin:20px auto;
+    animation:spin 1s linear infinite;
+  }
+
+  @keyframes spin{
+    to{transform:rotate(360deg);}
+  }
+
+  .search-count{
+    font-size:20px;
+    color:var(--ink-soft);
+    margin-bottom:22px;
+  }
+
+  .countdown-number{
+    font-family:'Shippori Mincho', serif;
+    font-size:88px;
+    font-weight:800;
+    color:var(--hanko);
+    margin:16px 0 24px;
+  }
+
+  #opponent-score-label.hidden{
+    display:none;
   }
 
   .game{
@@ -446,13 +506,27 @@
       </div>
 
       <div class="start-row">
-        <button class="start-btn" id="start-btn">はじめる（100秒）</button>
+        <button class="start-btn" id="start-btn">ひとりで練習（100秒）</button>
+        <button class="start-btn online-btn" id="start-online-btn">オンライン対戦（100秒）</button>
       </div>
+    </div>
+
+    <div class="online-status" id="searching">
+      <div class="status-title">対戦相手をさがしています</div>
+      <div class="search-spinner"></div>
+      <div class="search-count" id="search-count-label">残り 15 秒</div>
+      <button class="retry-btn" id="cancel-search-btn">キャンセル</button>
+    </div>
+
+    <div class="online-status" id="countdown">
+      <div class="status-title" id="countdown-starter"></div>
+      <div class="countdown-number" id="countdown-number">3</div>
     </div>
 
     <div class="game" id="game">
       <div class="hud">
         <span id="score-label">せいかい 0 もん</span>
+        <span id="opponent-score-label" class="hidden">あいて 0 もん</span>
         <span id="time-label">残り 100 秒</span>
       </div>
       <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
@@ -538,6 +612,29 @@ const statSpeedEl = document.getElementById("stat-speed");
 const statMissEl = document.getElementById("stat-miss");
 const imeSpacerEl = document.getElementById("ime-spacer");
 const headerEl = document.getElementById("site-header");
+const opponentScoreLabelEl = document.getElementById("opponent-score-label");
+const searchingEl = document.getElementById("searching");
+const searchCountLabelEl = document.getElementById("search-count-label");
+const cancelSearchBtn = document.getElementById("cancel-search-btn");
+const countdownEl = document.getElementById("countdown");
+const countdownStarterEl = document.getElementById("countdown-starter");
+const countdownNumberEl = document.getElementById("countdown-number");
+
+const ONLINE_SERVER_URL = "wss://key-onl.user-x45.workers.dev";
+
+let ws = null;
+let matchId = null;
+let myRole = null;
+let isOnlineMode = false;
+let onlineWordDeck = [];
+let onlineIndex = 0;
+let onlineScore = 0;
+let onlineMiss = 0;
+let onlineChars = 0;
+let opponentScore = 0;
+let searchCountdownTimer = null;
+let onlineTimerId = null;
+let onlineTimeLeft = 100;
 
 function fitSpacerToViewport(){
   imeSpacerEl.style.height = "0px";
@@ -576,10 +673,183 @@ document.querySelectorAll(".levels").forEach(row => {
 });
 
 document.getElementById("start-btn").addEventListener("click", startGame);
+document.getElementById("start-online-btn").addEventListener("click", startOnlineSearch);
+cancelSearchBtn.addEventListener("click", cancelSearch);
 document.getElementById("retry-btn").addEventListener("click", () => {
   resultEl.classList.remove("visible");
   setupEl.classList.remove("hidden");
 });
+
+function startOnlineSearch(){
+  setupEl.classList.add("hidden");
+  searchingEl.classList.add("visible");
+  let secondsLeft = 15;
+  searchCountLabelEl.textContent = `残り ${secondsLeft} 秒`;
+  ws = new WebSocket(`${ONLINE_SERVER_URL}/lobby?mode=${currentMode}&level=${currentLevel}`);
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if(msg.type === "matched"){
+      clearInterval(searchCountdownTimer);
+      matchId = msg.matchId;
+      myRole = msg.role;
+      connectToMatch();
+    } else if(msg.type === "timeout"){
+      clearInterval(searchCountdownTimer);
+      cancelSearch();
+      alert("対戦相手が見つかりませんでした");
+    }
+  };
+  ws.onerror = () => {
+    clearInterval(searchCountdownTimer);
+    cancelSearch();
+    alert("サーバーに接続できませんでした");
+  };
+  searchCountdownTimer = setInterval(() => {
+    secondsLeft--;
+    searchCountLabelEl.textContent = `残り ${secondsLeft} 秒`;
+    if(secondsLeft <= 0){
+      clearInterval(searchCountdownTimer);
+    }
+  }, 1000);
+}
+
+function cancelSearch(){
+  if(ws){ ws.close(); ws = null; }
+  clearInterval(searchCountdownTimer);
+  searchingEl.classList.remove("visible");
+  setupEl.classList.remove("hidden");
+}
+
+function connectToMatch(){
+  if(ws) ws.close();
+  ws = new WebSocket(`${ONLINE_SERVER_URL}/match/${matchId}?role=${myRole}&mode=${currentMode}&level=${currentLevel}`);
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if(msg.type === "start"){
+      onlineWordDeck = msg.wordDeck;
+      startOnlineCountdown(msg.starter);
+    } else if(msg.type === "opponentProgress"){
+      opponentScore = msg.score;
+      updateOpponentHud();
+    } else if(msg.type === "end"){
+      finishOnlineGame(msg);
+    } else if(msg.type === "opponentLeft"){
+      finishOnlineGame({
+        you:{score:onlineScore, miss:onlineMiss},
+        opponent:{score:opponentScore, miss:0},
+        result:"win",
+        forfeit:true
+      });
+    }
+  };
+}
+
+function startOnlineCountdown(starter){
+  searchingEl.classList.remove("visible");
+  countdownEl.classList.add("visible");
+  const starterLabel = starter === "you" ? "あなた" : "あいて";
+  countdownStarterEl.textContent = `せんこう：${starterLabel}`;
+  let count = 3;
+  countdownNumberEl.textContent = count;
+  const t = setInterval(() => {
+    count--;
+    if(count > 0){
+      countdownNumberEl.textContent = count;
+    } else {
+      clearInterval(t);
+      countdownEl.classList.remove("visible");
+      beginOnlineMatch();
+    }
+  }, 1000);
+}
+
+function beginOnlineMatch(){
+  isOnlineMode = true;
+  onlineIndex = 0;
+  onlineScore = 0;
+  onlineMiss = 0;
+  onlineChars = 0;
+  opponentScore = 0;
+  onlineTimeLeft = 100;
+  gameEl.classList.add("visible");
+  headerEl.classList.add("hidden");
+  document.body.classList.add("game-active");
+  opponentScoreLabelEl.classList.remove("hidden");
+  const modeLabel = currentMode === "kanji" ? "文章" : "ひらがな";
+  levelLabelEl.textContent = `${modeLabel}・${levelLabels[currentLevel]}（オンライン）`;
+  scoreLabelEl.textContent = `せいかい 0 もん`;
+  timeLabelEl.textContent = `残り 100 秒`;
+  timerFillEl.style.width = "100%";
+  updateOpponentHud();
+  currentWord = onlineWordDeck[0];
+  renderWord();
+  inputEl.value = "";
+  hintLabelEl.textContent = "Enterで確定";
+  fitSpacerToViewport();
+  inputEl.focus();
+  clearInterval(onlineTimerId);
+  onlineTimerId = setInterval(() => {
+    onlineTimeLeft--;
+    timeLabelEl.textContent = `残り ${onlineTimeLeft} 秒`;
+    timerFillEl.style.width = `${(onlineTimeLeft / 100) * 100}%`;
+    if(onlineTimeLeft <= 0){
+      clearInterval(onlineTimerId);
+      if(ws && ws.readyState === WebSocket.OPEN){
+        ws.send(JSON.stringify({type:"finished", score:onlineScore, miss:onlineMiss}));
+      }
+    }
+  }, 1000);
+}
+
+function updateOpponentHud(){
+  opponentScoreLabelEl.textContent = `あいて ${opponentScore} もん`;
+}
+
+function handleOnlineSubmit(typed){
+  if(typed !== currentWord){
+    onlineMiss++;
+    hintLabelEl.textContent = "まだ違います";
+    shakeInput();
+    return;
+  }
+  onlineScore++;
+  onlineChars += currentWord.length;
+  onlineIndex++;
+  currentWord = onlineWordDeck[onlineIndex % onlineWordDeck.length];
+  scoreLabelEl.textContent = `せいかい ${onlineScore} もん`;
+  renderWord();
+  inputEl.value = "";
+  hintLabelEl.textContent = "Enterで確定";
+  fitSpacerToViewport();
+  if(ws && ws.readyState === WebSocket.OPEN){
+    ws.send(JSON.stringify({type:"progress", score:onlineScore, index:onlineIndex}));
+  }
+}
+
+function finishOnlineGame(msg){
+  clearInterval(onlineTimerId);
+  isOnlineMode = false;
+  gameEl.classList.remove("visible");
+  headerEl.classList.remove("hidden");
+  document.body.classList.remove("game-active");
+  opponentScoreLabelEl.classList.add("hidden");
+  resultEl.classList.add("visible");
+  const you = msg.you;
+  const opponent = msg.opponent;
+  const attempts = you.score + you.miss;
+  const accuracy = attempts === 0 ? 0 : Math.round((you.score / attempts) * 100);
+  const speed = Math.round((onlineChars / 100) * 60);
+  let resultLabel = "ひきわけ";
+  if(msg.result === "win") resultLabel = msg.forfeit ? "しつげんしょう" : "しょうり";
+  else if(msg.result === "lose") resultLabel = "はいせん";
+  resultScoreEl.textContent = resultLabel;
+  const modeLabel = currentMode === "kanji" ? "文章" : "ひらがな";
+  resultSubEl.textContent = `${modeLabel}・${levelLabels[currentLevel]}（オンライン）/ あなた ${you.score}もん・あいて ${opponent.score}もん`;
+  statAccuracyEl.textContent = `${accuracy}%`;
+  statSpeedEl.textContent = speed;
+  statMissEl.textContent = you.miss;
+  if(ws){ ws.close(); ws = null; }
+}
 
 function pickWord(){
   const pool = wordBank[currentMode][currentLevel];
@@ -687,6 +957,11 @@ inputEl.addEventListener("keydown", (e) => {
   e.preventDefault();
 
   const typed = inputEl.value.trim();
+
+  if(isOnlineMode){
+    handleOnlineSubmit(typed);
+    return;
+  }
 
   if(typed !== currentWord){
     missCount++;
