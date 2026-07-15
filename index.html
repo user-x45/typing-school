@@ -430,7 +430,7 @@
     <div class="setup" id="setup">
       <div class="mode-tabs">
         <button class="mode-btn active" data-mode="hiragana">ひらがな</button>
-        <button class="mode-btn" data-mode="kanji">漢字</button>
+        <button class="mode-btn" data-mode="kanji">文章</button>
       </div>
 
       <div class="levels" data-row="hiragana">
@@ -623,7 +623,7 @@ function startGame(){
   headerEl.classList.add("hidden");
   document.body.classList.add("game-active");
   fitSpacerToViewport();
-  const modeLabel = currentMode === "kanji" ? "漢字" : "ひらがな";
+  const modeLabel = currentMode === "kanji" ? "文章" : "ひらがな";
   levelLabelEl.textContent = `${modeLabel}・${levelLabels[currentLevel]}`;
   score = 0;
   missCount = 0;
@@ -659,7 +659,7 @@ function endGame(){
   const finalScore = Math.max(0, Math.round(score * 100 + speed * 2 - missCount * 30));
 
   resultScoreEl.textContent = finalScore;
-  const modeLabel = currentMode === "kanji" ? "漢字" : "ひらがな";
+  const modeLabel = currentMode === "kanji" ? "文章" : "ひらがな";
   resultSubEl.textContent = `${modeLabel}・${levelLabels[currentLevel]} / ${score}もん せいかい`;
   statAccuracyEl.textContent = `${accuracy}%`;
   statSpeedEl.textContent = speed;
