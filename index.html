@@ -693,6 +693,7 @@ let opponentScore = 0;
 let searchCountdownTimer = null;
 let onlineTimerId = null;
 let onlineTimeLeft = 100;
+let countdownTimerId = null;
 
 function fitSpacerToViewport(){
   imeSpacerEl.style.height = "0px";
@@ -807,12 +808,13 @@ function startOnlineCountdown(){
   countdownEl.classList.add("visible");
   let count = 3;
   countdownNumberEl.textContent = count;
-  const t = setInterval(() => {
+  clearInterval(countdownTimerId);
+  countdownTimerId = setInterval(() => {
     count--;
     if(count > 0){
       countdownNumberEl.textContent = count;
     } else {
-      clearInterval(t);
+      clearInterval(countdownTimerId);
       countdownEl.classList.remove("visible");
       beginOnlineMatch();
     }
@@ -884,6 +886,8 @@ function handleOnlineSubmit(typed){
 
 function finishOnlineGame(msg){
   clearInterval(onlineTimerId);
+  clearInterval(countdownTimerId);
+  countdownEl.classList.remove("visible");
   isOnlineMode = false;
   gameEl.classList.remove("visible");
   headerEl.classList.remove("hidden");
