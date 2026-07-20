@@ -177,17 +177,22 @@
     background:var(--hanko-deep);
   }
 
-  .mute-btn{
-    position:absolute;
-    top:10px;
-    right:10px;
-    padding:8px 12px;
-    background:var(--ink);
-    color:var(--washi);
-    border:none;
-    border-radius:3px;
-    cursor:pointer;
+  .mute-check-label{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin-top:16px;
     font-size:13px;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+
+  .mute-check{
+    width:16px;
+    height:16px;
+    cursor:pointer;
+    accent-color:var(--hanko);
   }
 
   .end-game-btn{
@@ -695,7 +700,6 @@
     .start-btn{font-size:13px;padding:10px 18px;}
 
     header{padding-left:60px;padding-right:60px;}
-    .mute-btn{padding:6px 10px;font-size:11px;top:4px;right:0;}
 
     .status-title{font-size:15px;}
     .search-spinner{width:32px;height:32px;}
@@ -723,7 +727,6 @@
     <div class="kicker">SIMPLE TYPING</div>
     <h1>シンプルタイピング</h1>
     <div class="seal"><span>打</span></div>
-    <button id="mute-btn" class="mute-btn">ミュート</button>
   </header>
 
   <div class="panel">
@@ -750,6 +753,11 @@
         <button class="start-btn" id="start-btn">ひとりで練習</button>
         <button class="start-btn online-btn" id="start-online-btn">オンライン対戦</button>
       </div>
+
+      <label class="mute-check-label">
+        <input type="checkbox" id="mute-btn" class="mute-check">
+        ミュート
+      </label>
 
       <div class="ranking-box hidden" id="ranking-box">
         <div class="ranking-title">🏆 ランキング TOP20（総合スコア）</div>
@@ -893,7 +901,7 @@ const clickSoundEl = new Audio("sounds/click.mp3");
 const keySoundEl = new Audio("sounds/key.mp3");
 const correctSoundEl = new Audio("sounds/correct.mp3");
 const incorrectSoundEl = new Audio("sounds/incorrect.mp3");
-let isMuted = false;
+let isMuted = localStorage.getItem("isMuted") === "true";
 
 function playSound(baseAudio){
   if(isMuted) return;
@@ -912,9 +920,10 @@ inputEl.addEventListener("keydown", () => {
 });
 
 const muteBtn = document.getElementById("mute-btn");
-muteBtn.addEventListener("click", () => {
-  isMuted = !isMuted;
-  muteBtn.textContent = isMuted ? "ミュート解除" : "ミュート";
+muteBtn.checked = isMuted;
+muteBtn.addEventListener("change", () => {
+  isMuted = muteBtn.checked;
+  localStorage.setItem("isMuted", isMuted);
 });
 
 const rankingBoxEl = document.getElementById("ranking-box");
