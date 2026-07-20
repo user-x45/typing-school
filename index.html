@@ -612,6 +612,15 @@
     overflow-y:auto;
   }
 
+  .ranking-loading{
+    grid-column:1 / -1;
+    text-align:center;
+    padding:14px 10px;
+    font-size:13px;
+    color:var(--ink-soft);
+    opacity:0.75;
+  }
+
   .ranking-item{
     display:flex;
     align-items:center;
@@ -934,13 +943,23 @@ async function loadRanking(){
   const level = currentLevel;
   const modeLabel = mode === "kanji" ? "文章" : "ひらがな";
   rankingTitleEl.textContent = `🏆 ランキング TOP20（${modeLabel}・${levelLabels[level]}）`;
+  rankingListEl.innerHTML = `<li class="ranking-loading">読み込み中...</li>`;
+  rankingBoxEl.classList.remove("hidden");
   try{
     const res = await fetch(`${RANKING_API_URL}/ranking?mode=${mode}&level=${level}`);
-    if(!res.ok) return;
+    if(requestId !== rankingRequestId) return;
+    if(!res.ok){
+      rankingBoxEl.classList.add("hidden");
+      rankingListEl.innerHTML = "";
+      return;
+    }
     const scores = await res.json();
     if(requestId !== rankingRequestId) return;
     renderRanking(scores);
   }catch(e){
+    if(requestId !== rankingRequestId) return;
+    rankingBoxEl.classList.add("hidden");
+    rankingListEl.innerHTML = "";
   }
 }
 
