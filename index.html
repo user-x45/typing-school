@@ -772,7 +772,10 @@ const RANKING_API_URL = ONLINE_SERVER_URL.replace(/^wss:/, "https:").replace(/^w
 
 const rankingBoxEl = document.getElementById("ranking-box");
 const rankingListEl = document.getElementById("ranking-list");
+const rankingTitleEl = document.querySelector(".ranking-title");
 const resultRankBadgeEl = document.getElementById("result-rank-badge");
+
+let rankingRequestId = 0;
 
 function renderRanking(scores){
   if(!Array.isArray(scores) || scores.length === 0){
@@ -788,25 +791,33 @@ function renderRanking(scores){
 }
 
 async function loadRanking(){
+  const requestId = ++rankingRequestId;
+  const mode = currentMode;
+  const level = currentLevel;
+  const modeLabel = mode === "kanji" ? "文章" : "ひらがな";
+  rankingTitleEl.textContent = `🏆 ランキング TOP20（${modeLabel}・${levelLabels[level]}）`;
   try{
-    const res = await fetch(`${RANKING_API_URL}/ranking`);
+    const res = await fetch(`${RANKING_API_URL}/ranking?mode=${mode}&level=${level}`);
     if(!res.ok) return;
     const scores = await res.json();
+    if(requestId !== rankingRequestId) return;
     renderRanking(scores);
   }catch(e){
   }
 }
 
-async function submitScoreToRanking(score){
+async function submitScoreToRanking(score, mode, level){
   try{
-    const res = await fetch(`${RANKING_API_URL}/ranking`, {
+    const res = await fetch(`${RANKING_API_URL}/ranking?mode=${mode}&level=${level}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ score })
     });
     if(!res.ok) return;
     const data = await res.json();
-    renderRanking(data.top20);
+    if(mode === currentMode && level === currentLevel){
+      renderRanking(data.top20);
+    }
     if(data.rank){
       resultRankBadgeEl.textContent = `🏆 ランキング ${data.rank}位にランクインしました！`;
       resultRankBadgeEl.classList.add("visible");
@@ -816,6 +827,7 @@ async function submitScoreToRanking(score){
 }
 
 loadRanking();
+
 
 let ws = null;
 let matchId = null;
@@ -855,6 +867,7 @@ document.querySelectorAll(".mode-btn").forEach(btn => {
         lb.classList.toggle("active", i === 0);
       });
     });
+    loadRanking();
   });
 });
 
@@ -864,6 +877,7 @@ document.querySelectorAll(".levels").forEach(row => {
       row.querySelectorAll(".level-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       currentLevel = btn.dataset.level;
+      loadRanking();
     });
   });
 });
@@ -1134,7 +1148,7 @@ function endGame(){
   statSpeedEl.textContent = speed;
   statMissEl.textContent = missCount;
 
-  submitScoreToRanking(finalScore);
+  submitScoreToRanking(finalScore, currentMode, currentLevel);
 }
 
 function shakeInput(){
