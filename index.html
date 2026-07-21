@@ -81,6 +81,7 @@
       var(--washi);
     color:var(--ink);
     font-family:'BIZ UDPGothic', sans-serif;
+    line-height:1.5;
     display:flex;
     justify-content:center;
     padding:40px 16px;
@@ -158,7 +159,6 @@
     font-size:15px;
     color:var(--ink);
     margin-bottom:22px;
-    line-height:1.6;
   }
 
   .custom-alert-btn{
@@ -1135,6 +1135,7 @@ function beginOnlineMatch(){
   currentWord = onlineWordDeck[0];
   renderWord();
   inputEl.value = "";
+  inputEl.classList.remove("shake");
   hintLabelEl.textContent = "Enterで確定";
   fitSpacerToViewport();
   inputEl.focus();
@@ -1171,6 +1172,7 @@ function handleOnlineSubmit(typed){
   scoreLabelEl.textContent = `せいかい ${onlineScore} もん`;
   renderWord();
   inputEl.value = "";
+  inputEl.classList.remove("shake");
   hintLabelEl.textContent = "Enterで確定";
   fitSpacerToViewport();
   playSound(correctSoundEl);
@@ -1238,6 +1240,7 @@ function nextWord(){
   currentWord = pickWord();
   renderWord();
   inputEl.value = "";
+  inputEl.classList.remove("shake");
   hintLabelEl.textContent = "Enterで確定";
   fitSpacerToViewport();
 }
@@ -1329,6 +1332,8 @@ inputEl.addEventListener("compositionend", () => {
 
 inputEl.addEventListener("input", () => {
   updateProgressHighlight(inputEl.value);
+  inputEl.classList.remove("shake");
+  hintLabelEl.textContent = "Enterで確定";
 });
 
 inputEl.addEventListener("keydown", (e) => {
