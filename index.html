@@ -179,6 +179,38 @@
     background:var(--hanko-deep);
   }
 
+  .player-name-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:16px;
+    flex-wrap:wrap;
+  }
+
+  .player-name-label{
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+
+  .switch-player-btn{
+    padding:6px 14px;
+    background:transparent;
+    border:1.5px solid var(--line);
+    border-radius:3px;
+    font-family:'BIZ UDPGothic', sans-serif;
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:all 0.2s ease;
+  }
+
+  .switch-player-btn:hover{
+    border-color:var(--gold);
+    color:var(--ink);
+  }
+
   .mute-check-label{
     display:flex;
     align-items:center;
@@ -845,6 +877,11 @@
         <button class="level-btn" data-level="advanced">上級<span class="sub">14文字以上</span></button>
       </div>
 
+      <div class="player-name-row">
+        <span class="player-name-label" id="current-player-label"></span>
+        <button class="switch-player-btn" id="switch-player-btn"><i class="fas fa-right-left"></i> 次の人と交代</button>
+      </div>
+
       <div class="high-score-label setup-high-score" id="setup-high-score">ハイスコア 0</div>
 
       <div class="start-row">
@@ -932,7 +969,7 @@
 
 <div class="name-input-overlay" id="name-input-overlay">
   <div class="name-input-box">
-    <div class="name-input-message">ランキング登録名を入力してください（6文字まで）</div>
+    <div class="name-input-message" id="name-input-message">お名前を入力してください（6文字まで）</div>
     <input type="text" id="name-input-field" maxlength="6" autocomplete="off" placeholder="GUEST">
     <button class="name-input-btn" id="name-input-btn">登録</button>
   </div>
@@ -986,6 +1023,45 @@ nameInputFieldEl.addEventListener("keydown", (e) => {
     confirmNameInput();
   }
 });
+
+const PLAYER_NAME_KEY = "playerName";
+const currentPlayerLabelEl = document.getElementById("current-player-label");
+const switchPlayerBtnEl = document.getElementById("switch-player-btn");
+
+function getPlayerName(){
+  return sessionStorage.getItem(PLAYER_NAME_KEY);
+}
+
+function setPlayerName(name){
+  sessionStorage.setItem(PLAYER_NAME_KEY, name);
+  updatePlayerNameLabel();
+  updateSetupHighScore();
+}
+
+function updatePlayerNameLabel(){
+  const name = getPlayerName();
+  currentPlayerLabelEl.textContent = name ? `プレイヤー：${name}` : "";
+}
+
+function ensurePlayerName(){
+  if(getPlayerName()) return;
+  showNameInputModal((name) => {
+    setPlayerName(name);
+  });
+}
+
+switchPlayerBtnEl.addEventListener("click", () => {
+  sessionStorage.removeItem(PLAYER_NAME_KEY);
+  clearAllHighScores();
+  updatePlayerNameLabel();
+  updateSetupHighScore();
+  showNameInputModal((name) => {
+    setPlayerName(name);
+  });
+});
+
+updatePlayerNameLabel();
+ensurePlayerName();
 
 const wordBank = {
   hiragana: {
@@ -1082,12 +1158,18 @@ function getHighScoreKey(mode, level){
 }
 
 function getHighScore(mode, level){
-  const value = localStorage.getItem(getHighScoreKey(mode, level));
+  const value = sessionStorage.getItem(getHighScoreKey(mode, level));
   return value ? parseInt(value, 10) : 0;
 }
 
 function setHighScore(mode, level, newScore){
-  localStorage.setItem(getHighScoreKey(mode, level), String(newScore));
+  sessionStorage.setItem(getHighScoreKey(mode, level), String(newScore));
+}
+
+function clearAllHighScores(){
+  Object.keys(sessionStorage)
+    .filter(key => key.startsWith("highScore_"))
+    .forEach(key => sessionStorage.removeItem(key));
 }
 
 function updateSetupHighScore(){
@@ -1186,9 +1268,8 @@ async function checkRankQualifies(score, mode, level){
 async function handleRankingSubmission(score, mode, level){
   const qualifies = await checkRankQualifies(score, mode, level);
   if(!qualifies) return;
-  showNameInputModal((name) => {
-    submitScoreToRanking(score, mode, level, name);
-  });
+  const name = normalizePlayerName(getPlayerName());
+  submitScoreToRanking(score, mode, level, name);
 }
 
 loadRanking();
