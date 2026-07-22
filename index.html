@@ -627,9 +627,96 @@
     color:var(--gold);
   }
 
+  .ranking-item .name{
+    flex:1;
+    margin:0 8px;
+    color:var(--ink-soft);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
   .ranking-item .score{
     font-weight:600;
     color:var(--ink);
+  }
+
+  .name-input-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(31,28,25,0.55);
+    align-items:center;
+    justify-content:center;
+    z-index:1000;
+    padding:20px;
+  }
+
+  .name-input-overlay.visible{
+    display:flex;
+  }
+
+  .name-input-box{
+    background:var(--washi);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:28px 24px;
+    max-width:320px;
+    width:100%;
+    text-align:center;
+    position:relative;
+    box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  }
+
+  .name-input-box::before{
+    content:"";
+    position:absolute;
+    inset:6px;
+    border:1px solid rgba(31,28,25,0.12);
+    border-radius:2px;
+    pointer-events:none;
+  }
+
+  .name-input-message{
+    font-size:14px;
+    color:var(--ink);
+    margin-bottom:16px;
+  }
+
+  .name-input-box input{
+    width:100%;
+    padding:10px 12px;
+    background:var(--input-bg);
+    border:1px solid var(--line);
+    border-radius:3px;
+    font-family:'BIZ UDPGothic', sans-serif;
+    font-size:16px;
+    color:var(--ink);
+    text-align:center;
+    margin-bottom:18px;
+  }
+
+  .name-input-box input:focus{
+    outline:none;
+    border-color:var(--gold);
+  }
+
+  .name-input-btn{
+    padding:10px 32px;
+    background:var(--hanko);
+    color:var(--washi);
+    border:none;
+    border-radius:3px;
+    font-family:'BIZ UDPGothic', sans-serif;
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:0.05em;
+    cursor:pointer;
+    transition:background 0.2s ease;
+  }
+
+  .name-input-btn:hover{
+    background:var(--hanko-deep);
   }
 
   .result-rank-badge{
@@ -843,6 +930,14 @@
   </div>
 </div>
 
+<div class="name-input-overlay" id="name-input-overlay">
+  <div class="name-input-box">
+    <div class="name-input-message">ランキング登録名を入力してください（6文字まで）</div>
+    <input type="text" id="name-input-field" maxlength="6" autocomplete="off" placeholder="GUEST">
+    <button class="name-input-btn" id="name-input-btn">登録</button>
+  </div>
+</div>
+
 <script>
 const customAlertOverlayEl = document.getElementById("custom-alert-overlay");
 const customAlertMessageEl = document.getElementById("custom-alert-message");
@@ -855,6 +950,41 @@ function showCustomAlert(message){
 
 customAlertBtnEl.addEventListener("click", () => {
   customAlertOverlayEl.classList.remove("visible");
+});
+
+const nameInputOverlayEl = document.getElementById("name-input-overlay");
+const nameInputFieldEl = document.getElementById("name-input-field");
+const nameInputBtnEl = document.getElementById("name-input-btn");
+let nameInputCallback = null;
+
+function normalizePlayerName(raw){
+  const trimmed = (raw || "").trim().slice(0, 6);
+  return trimmed.length === 0 ? "GUEST" : trimmed;
+}
+
+function showNameInputModal(callback){
+  nameInputCallback = callback;
+  nameInputFieldEl.value = "";
+  nameInputOverlayEl.classList.add("visible");
+  nameInputFieldEl.focus();
+}
+
+function confirmNameInput(){
+  const name = normalizePlayerName(nameInputFieldEl.value);
+  nameInputOverlayEl.classList.remove("visible");
+  if(nameInputCallback){
+    const callback = nameInputCallback;
+    nameInputCallback = null;
+    callback(name);
+  }
+}
+
+nameInputBtnEl.addEventListener("click", confirmNameInput);
+nameInputFieldEl.addEventListener("keydown", (e) => {
+  if(e.key === "Enter"){
+    e.preventDefault();
+    confirmNameInput();
+  }
 });
 
 const wordBank = {
@@ -965,6 +1095,17 @@ function updateSetupHighScore(){
 }
 
 let rankingRequestId = 0;
+const RANKING_DISPLAY_MAX = 20;
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[ch]));
+}
 
 function renderRanking(scores){
   if(!Array.isArray(scores) || scores.length === 0){
@@ -974,7 +1115,9 @@ function renderRanking(scores){
   }
   rankingListEl.innerHTML = scores.map((s, i) => {
     const rank = i + 1;
-    return `<li class="ranking-item${rank <= 3 ? " top3" : ""}"><span class="rank">${rank}位</span><span class="score">${s}</span></li>`;
+    const entryScore = typeof s === "object" && s !== null ? s.score : s;
+    const entryName = typeof s === "object" && s !== null && s.name ? s.name : "GUEST";
+    return `<li class="ranking-item${rank <= 3 ? " top3" : ""}"><span class="rank">${rank}位</span><span class="name">${escapeHtml(entryName)}</span><span class="score">${entryScore}</span></li>`;
   }).join("");
   rankingBoxEl.classList.remove("hidden");
 }
@@ -1005,12 +1148,12 @@ async function loadRanking(){
   }
 }
 
-async function submitScoreToRanking(score, mode, level){
+async function submitScoreToRanking(score, mode, level, name){
   try{
     const res = await fetch(`${RANKING_API_URL}/ranking?mode=${mode}&level=${level}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ score })
+      body: JSON.stringify({ score, name })
     });
     if(!res.ok) return;
     const data = await res.json();
@@ -1023,6 +1166,35 @@ async function submitScoreToRanking(score, mode, level){
     }
   }catch(e){
   }
+}
+
+async function checkRankQualifies(score, mode, level){
+  try{
+    const res = await fetch(`${RANKING_API_URL}/ranking?mode=${mode}&level=${level}`);
+    if(!res.ok) return true;
+    const scores = await res.json();
+    if(!Array.isArray(scores)) return true;
+    if(scores.length < RANKING_DISPLAY_MAX) return true;
+    const lowestEntry = scores[scores.length - 1];
+    const lowestScore = typeof lowestEntry === "object" && lowestEntry !== null ? lowestEntry.score : lowestEntry;
+    return score >= lowestScore;
+  }catch(e){
+    return true;
+  }
+}
+
+async function handleRankingSubmission(score, mode, level){
+  const qualifies = await checkRankQualifies(score, mode, level);
+  if(!qualifies) return;
+  const savedName = localStorage.getItem("playerName");
+  if(savedName){
+    submitScoreToRanking(score, mode, level, savedName);
+    return;
+  }
+  showNameInputModal((name) => {
+    localStorage.setItem("playerName", name);
+    submitScoreToRanking(score, mode, level, name);
+  });
 }
 
 loadRanking();
@@ -1428,7 +1600,7 @@ function endGame(isNormalEnd){
     updateSetupHighScore();
 
     if(finalScore > 0){
-      submitScoreToRanking(finalScore, currentMode, currentLevel);
+      handleRankingSubmission(finalScore, currentMode, currentLevel);
     }
   } else {
     setupEl.classList.remove("hidden");
