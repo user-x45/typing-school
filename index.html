@@ -1186,13 +1186,7 @@ async function checkRankQualifies(score, mode, level){
 async function handleRankingSubmission(score, mode, level){
   const qualifies = await checkRankQualifies(score, mode, level);
   if(!qualifies) return;
-  const savedName = localStorage.getItem("playerName");
-  if(savedName){
-    submitScoreToRanking(score, mode, level, savedName);
-    return;
-  }
   showNameInputModal((name) => {
-    localStorage.setItem("playerName", name);
     submitScoreToRanking(score, mode, level, name);
   });
 }
