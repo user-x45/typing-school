@@ -650,6 +650,39 @@
     display:block;
   }
 
+  .high-score-label{
+    font-size:12px;
+    color:var(--ink-soft);
+    opacity:0.8;
+  }
+
+  .setup-high-score{
+    text-align:center;
+    margin-bottom:16px;
+  }
+
+  .result-high-score{
+    margin-bottom:14px;
+  }
+
+  .new-record-badge{
+    display:none;
+    margin:10px auto 0;
+    max-width:280px;
+    padding:8px 14px;
+    background:var(--gold);
+    color:var(--washi);
+    border-radius:3px;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.05em;
+    text-align:center;
+  }
+
+  .new-record-badge.visible{
+    display:block;
+  }
+
   .retry-btn{
     padding:12px 36px;
     background:transparent;
@@ -725,6 +758,8 @@
         <button class="level-btn" data-level="advanced">上級<span class="sub">14文字以上</span></button>
       </div>
 
+      <div class="high-score-label setup-high-score" id="setup-high-score">ハイスコア 0</div>
+
       <div class="start-row">
         <button class="start-btn" id="start-btn">ひとりで練習</button>
         <button class="start-btn online-btn" id="start-online-btn">オンライン対戦</button>
@@ -779,6 +814,8 @@
       <div class="result-score" id="result-score">0</div>
       <div class="result-sub" id="result-sub">総合スコア</div>
       <div class="result-rank-badge" id="result-rank-badge"></div>
+      <div class="high-score-label result-high-score" id="result-high-score">ハイスコア 0</div>
+      <div class="new-record-badge" id="new-record-badge">ハイスコア更新！</div>
       <div class="stat-grid">
         <div class="stat-box">
           <div class="stat-value" id="stat-accuracy">0%</div>
@@ -906,6 +943,26 @@ const rankingBoxEl = document.getElementById("ranking-box");
 const rankingListEl = document.getElementById("ranking-list");
 const rankingTitleEl = document.querySelector(".ranking-title");
 const resultRankBadgeEl = document.getElementById("result-rank-badge");
+const setupHighScoreEl = document.getElementById("setup-high-score");
+const resultHighScoreEl = document.getElementById("result-high-score");
+const newRecordBadgeEl = document.getElementById("new-record-badge");
+
+function getHighScoreKey(mode, level){
+  return `highScore_${mode}_${level}`;
+}
+
+function getHighScore(mode, level){
+  const value = localStorage.getItem(getHighScoreKey(mode, level));
+  return value ? parseInt(value, 10) : 0;
+}
+
+function setHighScore(mode, level, newScore){
+  localStorage.setItem(getHighScoreKey(mode, level), String(newScore));
+}
+
+function updateSetupHighScore(){
+  setupHighScoreEl.textContent = `ハイスコア ${getHighScore(currentMode, currentLevel)}`;
+}
 
 let rankingRequestId = 0;
 
@@ -1012,6 +1069,7 @@ document.querySelectorAll(".mode-btn").forEach(btn => {
     });
     loadRanking();
     updateUrlHash();
+    updateSetupHighScore();
   });
 });
 
@@ -1023,6 +1081,7 @@ document.querySelectorAll(".levels").forEach(row => {
       currentLevel = btn.dataset.level;
       loadRanking();
       updateUrlHash();
+      updateSetupHighScore();
     });
   });
 });
@@ -1061,6 +1120,7 @@ function applyStateFromHash(){
   });
 
   loadRanking();
+  updateSetupHighScore();
 }
 
 applyStateFromHash();
@@ -1319,6 +1379,7 @@ function startGame(){
   usedWords = [];
   resultRankBadgeEl.classList.remove("visible");
   resultRankBadgeEl.textContent = "";
+  newRecordBadgeEl.classList.remove("visible");
   scoreLabelEl.textContent = `せいかい 0 もん`;
   timeLabelEl.textContent = `残り 100 秒`;
   timerFillEl.style.width = "100%";
@@ -1354,6 +1415,17 @@ function endGame(isNormalEnd){
     statAccuracyEl.textContent = `${accuracy}%`;
     statSpeedEl.textContent = speed;
     statMissEl.textContent = missCount;
+
+    const previousHighScore = getHighScore(currentMode, currentLevel);
+    if(finalScore > previousHighScore){
+      setHighScore(currentMode, currentLevel, finalScore);
+      resultHighScoreEl.textContent = `ハイスコア ${finalScore}`;
+      newRecordBadgeEl.classList.add("visible");
+    } else {
+      resultHighScoreEl.textContent = `ハイスコア ${previousHighScore}`;
+      newRecordBadgeEl.classList.remove("visible");
+    }
+    updateSetupHighScore();
 
     if(finalScore > 0){
       submitScoreToRanking(finalScore, currentMode, currentLevel);
