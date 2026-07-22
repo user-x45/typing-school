@@ -1011,6 +1011,7 @@ document.querySelectorAll(".mode-btn").forEach(btn => {
       });
     });
     loadRanking();
+    updateUrlHash();
   });
 });
 
@@ -1021,9 +1022,18 @@ document.querySelectorAll(".levels").forEach(row => {
       btn.classList.add("active");
       currentLevel = btn.dataset.level;
       loadRanking();
+      updateUrlHash();
     });
   });
 });
+
+function updateUrlHash(){
+  if(currentMode === "hiragana" && currentLevel === "beginner"){
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  } else {
+    window.location.hash = `${currentMode}-${currentLevel}`;
+  }
+}
 
 document.getElementById("start-btn").addEventListener("click", startGame);
 document.getElementById("start-online-btn").addEventListener("click", startOnlineSearch);
