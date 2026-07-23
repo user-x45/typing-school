@@ -1032,13 +1032,14 @@ nameInputFieldEl.addEventListener("keydown", (e) => {
   }
 });
 
-const GOOGLE_CLIENT_ID = "934662707347-mog2fs8vq4ifl4hq4s5dobkv1oauni6n.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
 const SESSION_TOKEN_KEY = "sessionToken";
 const currentPlayerLabelEl = document.getElementById("current-player-label");
 const logoutBtnEl = document.getElementById("logout-btn");
 const googleSigninContainerEl = document.getElementById("google-signin-container");
 
 let currentPlayerName = null;
+let serverHighScores = null;
 
 function getPlayerName(){
   return currentPlayerName;
@@ -1060,8 +1061,23 @@ function updatePlayerNameLabel(){
   currentPlayerLabelEl.textContent = currentPlayerName ? `プレイヤー：${currentPlayerName}` : "";
 }
 
-function showLoggedInUi(name){
+async function loadServerHighScores(token){
+  try{
+    const res = await fetch(`${RANKING_API_URL}/auth`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getHighScores", token })
+    });
+    const data = await res.json();
+    serverHighScores = data.highScores || {};
+  }catch(e){
+    serverHighScores = {};
+  }
+}
+
+async function showLoggedInUi(name, token){
   currentPlayerName = name;
+  await loadServerHighScores(token);
   updatePlayerNameLabel();
   updateSetupHighScore();
   googleSigninContainerEl.classList.add("hidden");
@@ -1069,7 +1085,8 @@ function showLoggedInUi(name){
 }
 
 function showLoggedOutUi(){
-  currentPlayerName = null;
+  currentPlayerName = "GUEST";
+  serverHighScores = null;
   updatePlayerNameLabel();
   updateSetupHighScore();
   googleSigninContainerEl.classList.remove("hidden");
@@ -1090,7 +1107,7 @@ async function verifySession(){
     });
     const data = await res.json();
     if(data.valid){
-      showLoggedInUi(data.name);
+      await showLoggedInUi(data.name, token);
     } else {
       clearSessionToken();
       showLoggedOutUi();
@@ -1133,14 +1150,14 @@ async function handleGoogleCredential(response){
       }
       if(regData.token){
         setSessionToken(regData.token);
-        showLoggedInUi(regData.name);
+        await showLoggedInUi(regData.name, regData.token);
       } else {
         showCustomAlert("登録に失敗しました");
       }
     });
   } else {
     setSessionToken(data.token);
-    showLoggedInUi(data.name);
+    await showLoggedInUi(data.name, data.token);
   }
 }
 
@@ -1266,18 +1283,29 @@ function getHighScoreKey(mode, level){
 }
 
 function getHighScore(mode, level){
-  const value = sessionStorage.getItem(getHighScoreKey(mode, level));
+  const key = getHighScoreKey(mode, level);
+  if(serverHighScores){
+    return serverHighScores[key] || 0;
+  }
+  const value = localStorage.getItem(key);
   return value ? parseInt(value, 10) : 0;
 }
 
 function setHighScore(mode, level, newScore){
-  sessionStorage.setItem(getHighScoreKey(mode, level), String(newScore));
-}
-
-function clearAllHighScores(){
-  Object.keys(sessionStorage)
-    .filter(key => key.startsWith("highScore_"))
-    .forEach(key => sessionStorage.removeItem(key));
+  const key = getHighScoreKey(mode, level);
+  if(serverHighScores){
+    serverHighScores[key] = newScore;
+    const token = getSessionToken();
+    if(token){
+      fetch(`${RANKING_API_URL}/auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "setHighScore", token, mode, level, score: newScore })
+      }).catch(() => {});
+    }
+    return;
+  }
+  localStorage.setItem(key, String(newScore));
 }
 
 function updateSetupHighScore(){
