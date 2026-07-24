@@ -125,6 +125,15 @@
     flex-wrap:wrap;
   }
 
+  .google-btn-container{
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    opacity:0.01;
+    pointer-events:none;
+  }
+
   .custom-alert-overlay{
     display:none;
     position:fixed;
@@ -854,6 +863,7 @@
     <div class="menu-auth">
       <span class="player-name-label" id="current-player-label"></span>
       <button class="switch-player-btn" id="google-login-btn"><i class="fab fa-google"></i> ログイン</button>
+      <div id="google-btn-container" class="google-btn-container"></div>
       <button class="switch-player-btn hidden" id="logout-btn"><i class="fas fa-right-from-bracket"></i> ログアウト</button>
     </div>
   </div>
@@ -1025,6 +1035,7 @@ const SESSION_TOKEN_KEY = "sessionToken";
 const currentPlayerLabelEl = document.getElementById("current-player-label");
 const logoutBtnEl = document.getElementById("logout-btn");
 const googleLoginBtnEl = document.getElementById("google-login-btn");
+const googleBtnContainerEl = document.getElementById("google-btn-container");
 
 let currentPlayerName = null;
 let serverHighScores = null;
@@ -1155,11 +1166,14 @@ function initGoogleSignIn(){
     client_id: GOOGLE_CLIENT_ID,
     callback: handleGoogleCredential
   });
+  google.accounts.id.renderButton(googleBtnContainerEl, { theme: "outline", size: "large", text: "signin_with", locale: "ja" });
 }
 
 googleLoginBtnEl.addEventListener("click", () => {
-  if(!window.google || !google.accounts || !google.accounts.id) return;
-  google.accounts.id.prompt();
+  const realBtn = googleBtnContainerEl.querySelector("div[role=button]");
+  if(realBtn){
+    realBtn.click();
+  }
 });
 
 logoutBtnEl.addEventListener("click", () => {
